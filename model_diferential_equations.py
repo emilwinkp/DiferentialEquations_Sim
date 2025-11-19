@@ -69,16 +69,20 @@ plt.tight_layout()
 ''' Animacion del sistema masa resorte amortiguado '''
 
 # Longitudes de los resortes 
-L1 = 0.1 
-L2 = 0.1
+L1 = 0.09
+L2 = 0.09
+
+# Dimensiones para tabla horizontal (masa 1)
+ancho_tabla = 0.18
+alto_tabla = 0.03
 
 fig, ax = plt.subplots(figsize=(8, 8))
-ax.set_xlim(-0.3, 0.3)
-ax.set_ylim(-0.5, 0.1)
+ax.set_xlim(-0.4, 0.4)
+ax.set_ylim(-0.4, 0.2)
 ax.set_title("Animación del sistema masa-resorte-amortiguado")
 ax.set_xlabel("Eje X")
 ax.set_ylabel("Altura (m)")
-ax.grid()
+ax.grid(True)
 ax.set_aspect('equal')
 
 # Dibujar techo
@@ -104,21 +108,27 @@ def dibujar_resorte(x0,y0,x1,y1,width, numero_de_curvas = 5):
 
 # Elementos de la animacion 
 resorte1_linea, = ax.plot([],[], 'b-', lw = 1.5)
-masa1_circulo = plt.Circle((0,0), 0.03, fc = "red", ec = "black")
+masa1_tabla = plt.Rectangle((-ancho_tabla/2, 0), ancho_tabla, alto_tabla, fc="brown", ec="black", zorder=10)
 resorte2_linea, = ax.plot([],[], 'g-', lw = 1.5)
-masa2_circulo = plt.Circle((0,0), 0.03, fc = "blue", ec = "black")
+masa2_circulo = plt.Circle((0,0), 0.04, fc = "blue", ec = "black")
 
 # Masas en la grafica
-ax.add_patch(masa1_circulo)
+ax.add_patch(masa1_tabla)
 ax.add_patch(masa2_circulo)
+
+# Etiquetas de las masas
+etiqueta_m1 = ax.text(0, 0, 'Masa 1', ha='center', va='center', color='gray', fontweight='bold', zorder=11)
+etiqueta_m2 = ax.text(0, 0, 'Masa 2', ha='center', va='center', color='gray', fontweight='bold', zorder=11)
 
 # Inicializacion
 def init():
     resorte1_linea.set_data([],[])
     resorte2_linea.set_data([],[])
-    masa1_circulo.center = (0, 0)
-    masa2_circulo.center = (0,0)
-    return resorte1_linea, resorte2_linea, masa1_circulo, masa2_circulo
+    masa1_tabla.set_xy((-ancho_tabla/2, -alto_tabla/2))
+    masa2_circulo.center = (0,-L1 -L2)
+    etiqueta_m1.set_position((0, -alto_tabla/2))
+    etiqueta_m2.set_position((0, -L1 -L2))
+    return resorte1_linea, resorte2_linea, masa1_tabla, masa2_circulo, etiqueta_m1, etiqueta_m2
 
 # Actualizacion para animacion 
 
@@ -133,17 +143,19 @@ def actualizar(frame):
     y_masa2 = y_masa1 - L2 - (x2 - x1)
 
     # Actualizar resortes
-    resorte1_x, resorte1_y = dibujar_resorte(0, y_techo, 0, y_masa1, 0.03, 8)
+    resorte1_x, resorte1_y = dibujar_resorte(0, y_techo, 0, y_masa1, 0.025, 8)
     resorte1_linea.set_data(resorte1_x, resorte1_y)
     
-    resorte2_x, resorte2_y = dibujar_resorte(0, y_masa1, 0, y_masa2, 0.03, 8)
+    resorte2_x, resorte2_y = dibujar_resorte(0, y_masa1, 0, y_masa2, 0.025, 8)
     resorte2_linea.set_data(resorte2_x, resorte2_y)
 
     # Actualizar masas 
-    masa1_circulo.center = (0, y_masa1)
+    masa1_tabla.set_xy((-ancho_tabla/2, y_masa1 - alto_tabla/2))
     masa2_circulo.center = (0, y_masa2)
 
-    return resorte1_linea, resorte2_linea, masa1_circulo, masa2_circulo
+    etiqueta_m1.set_position((0, y_masa1))
+    etiqueta_m2.set_position((0, y_masa2))
+    return resorte1_linea, resorte2_linea, masa1_tabla, masa2_circulo, etiqueta_m1, etiqueta_m2
 
 # Animacion 
 
