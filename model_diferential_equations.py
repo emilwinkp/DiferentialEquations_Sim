@@ -7,18 +7,23 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from matplotlib.animation import PillowWriter
+from matplotlib.animation import FFMpegWriter
+import csv
 
 # Masas del sistema
-masa_1 = 200/1000 # Peso del aro intermedio en kilogramos
-masa_2 = 60/1000 # Peso de la lampara en kilogramos
+masa_1 = 74/1000 # Peso del aro intermedio en kilogramos
+masa_2 = 271/1000 # Peso de la lampara en kilogramos
 
 # Constantes elasticas de las ligas obtenidas a partir de experimentacion
-k1 = 4.5  # Constante elastica de la liga superior en N
-k2 = 3.5  # Constante elastica de la liga inferior en N
+k1 = 80.23  # Constante elastica de la liga superior en N
+k2 = 82.36 # Constante elastica de la liga inferior en N
 
 # Resistencias de amortiguamiento
-resistencia_1 = 0.5  # Resistencia de amortiguamiento de la masa 1 en Ns/m
-resistencia_2 = 0.3  # Resistencia de amortiguamiento de la masa 2 en Ns/m
+resistencia_1 = 0.02     # Resistencia de amortiguamiento de la masa 1 en Ns/m
+resistencia_2 = 0.02  # Resistencia de amortiguamiento de la masa 2 en Ns/m
+
+radio = 0.03
 
 def Derivadas(t, y):
     x1, x2, v1, v2 = y
@@ -37,9 +42,9 @@ def Runge_Kutta_4(f,t,y,h):
     return y + (h/6) * (k1 + 2*k2 + 2*k3 + k4)
 
 # Condiciones iniciales
-y0 = np.array([0.01,0.0,0.0,0.0]) # [x1, x2, v1, v2]
+y0 = np.array([0.01,0.02,0.0,0.0]) # [x1, x2, v1, v2] Modifican condiciones iniciales dependiendo de lo requerido
 t0 = 0.0 
-tf = 10.0 
+tf = 50.3 # Para poder comparar con el experimento
 dt = 0.001 
 
 # Vector para almacenar suluciones
@@ -54,11 +59,30 @@ for i in range(1,N):
 x1_valores = valores_y[:, 0]
 x2_valores = valores_y[:, 1]
 
+# Transcribir datos obtenidos en un archivo csv
+
+with open("datos_sistema_2DOF.csv", mode="w", newline="") as archivo:
+    escritor = csv.writer(archivo)
+    
+    # Encabezados
+    escritor.writerow(["t", "x1", "x2", "v1", "v2"])
+    
+    # Guardar datos
+    for i in range(N):
+        escritor.writerow([
+            valores_t[i],
+            valores_y[i, 0],   # x1
+            valores_y[i, 1],   # x2
+            valores_y[i, 2],   # v1
+            valores_y[i, 3]    # v2
+        ])
+
+print("Archivo CSV 'datos_sistema_2DOF.csv' creado.")
 
 # Graficacion 
 plt.figure(figsize=(10, 5))
-plt.plot(valores_t, x1_valores, label="x1 (masa intermedia)")
-plt.plot(valores_t, x2_valores, label="x2 (lampara)")
+plt.plot(valores_t, x1_valores, label="x1 (masa intermedia)", linewidth=0.6)
+plt.plot(valores_t, x2_valores, label="x2 (lampara)",linewidth=1)
 plt.xlabel("Tiempo (s)")
 plt.ylabel("Desplazamiento (m)")
 plt.title("Sistema de 2 DOF masa-resorte amortiguado")
@@ -68,13 +92,13 @@ plt.tight_layout()
 
 ''' Animacion del sistema masa resorte amortiguado '''
 
-# Longitudes de los resortes 
-L1 = 0.09
-L2 = 0.09
+# Longitudes de los resortes en metros
+L1 = 0.064 #En reposo 0.046
+L2 = 0.06 #En reposo 0.031
 
-# Dimensiones para tabla horizontal (masa 1)
-ancho_tabla = 0.18
-alto_tabla = 0.03
+# Dimensiones para tabla horizontal (masa 1) en metros
+ancho_tabla = 0.1
+alto_tabla = 0.02
 
 fig, ax = plt.subplots(figsize=(8, 8))
 ax.set_xlim(-0.4, 0.4)
@@ -110,7 +134,7 @@ def dibujar_resorte(x0,y0,x1,y1,width, numero_de_curvas = 5):
 resorte1_linea, = ax.plot([],[], 'b-', lw = 1.5)
 masa1_tabla = plt.Rectangle((-ancho_tabla/2, 0), ancho_tabla, alto_tabla, fc="brown", ec="black", zorder=10)
 resorte2_linea, = ax.plot([],[], 'g-', lw = 1.5)
-masa2_circulo = plt.Circle((0,0), 0.04, fc = "blue", ec = "black")
+masa2_circulo = plt.Circle((0,0), radio , fc = "blue", ec = "black")
 
 # Masas en la grafica
 ax.add_patch(masa1_tabla)
@@ -136,7 +160,6 @@ def actualizar(frame):
     factor_visual = 2
     x1 = x1_valores[frame] * factor_visual
     x2 = x2_valores[frame] * factor_visual
-
     # Posiciones verticales
     y_techo = 0
     y_masa1 = y_techo - L1 - x1
@@ -146,7 +169,7 @@ def actualizar(frame):
     resorte1_x, resorte1_y = dibujar_resorte(0, y_techo, 0, y_masa1, 0.025, 8)
     resorte1_linea.set_data(resorte1_x, resorte1_y)
     
-    resorte2_x, resorte2_y = dibujar_resorte(0, y_masa1, 0, y_masa2, 0.025, 8)
+    resorte2_x, resorte2_y = dibujar_resorte(0, y_masa1, 0, y_masa2 + radio, 0.025, 8)
     resorte2_linea.set_data(resorte2_x, resorte2_y)
 
     # Actualizar masas 
@@ -159,6 +182,16 @@ def actualizar(frame):
 
 # Animacion 
 
-animacion = FuncAnimation(fig, actualizar, frames= range(0, len(valores_t), 5), init_func=init, blit=True, interval=20, repeat=True)
+writer = FFMpegWriter(fps=30)
+tiempo_max_animacion = 30  # segundos
+N_anim = int(tiempo_max_animacion / dt)
+
+frames = range(0, N_anim, 5)
+animacion = FuncAnimation(fig, actualizar, frames, init_func=init, blit=True, interval=20, repeat=True)
 plt.tight_layout()
+writer = PillowWriter(fps=30)
+#animacion.save("sistema_masa_resorte.gif", writer=writer)
+
 plt.show()
+
+
